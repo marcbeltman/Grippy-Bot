@@ -10,6 +10,7 @@ const SLIDER_CONFIGS = [
 const NODE_RED_ENDPOINT = '/update-robot-arm';
 
 // --- STATE ---
+let debounceTimer;
 let statusTimer;
 const sliderValues = {};
 SLIDER_CONFIGS.forEach(config => {
@@ -57,63 +58,25 @@ function updateStatusIndicator(status, message = '') {
     statusIndicator.innerHTML = html;
 }
 
-// WebSocket client to send slider values to Node-RED
-let ws = null;
-let wsBackoff = 1000;
-let wsMaxBackoff = 30000;
-let wsOpen = false;
-const wsQueue = [];
-
-function connectWebSocket() {
+/**
+ * Sends the current slider data to the Node-RED endpoint.
+ * @param {object} data The slider values to send.
+ */
+async function sendSliderData(data) {
   try {
-    ws = new WebSocket('wss://node-red.xyz/ws/robot-arm');
-  } catch (err) {
-    console.error('WebSocket constructor error:', err);
-    scheduleReconnect();
-    return;
+    const response = await fetch(NODE_RED_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send data to Node-RED:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to send data: ${errorMessage}` };
   }
-
-  ws.addEventListener('open', () => {
-    console.info('WebSocket connected');
-    wsBackoff = 1000;
-    wsOpen = true;
-    updateStatusIndicator('success');
-    // flush queue
-    while (wsQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
-      const msg = wsQueue.shift();
-      ws.send(msg);
-    }
-  });
-
-  ws.addEventListener('message', (ev) => {
-    // Optionally handle server messages (not required)
-    console.debug('WS message:', ev.data);
-  });
-
-  ws.addEventListener('close', (ev) => {
-    console.warn('WebSocket closed', ev);
-    wsOpen = false;
-    updateStatusIndicator('error', 'WebSocket closed');
-    scheduleReconnect();
-  });
-
-  ws.addEventListener('error', (err) => {
-    console.error('WebSocket error', err);
-    wsOpen = false;
-    updateStatusIndicator('error', 'WebSocket error');
-    // let close handler decide reconnect
-  });
 }
-
-function scheduleReconnect() {
-  setTimeout(() => {
-    wsBackoff = Math.min(wsBackoff * 1.5, wsMaxBackoff);
-    connectWebSocket();
-  }, wsBackoff);
-}
-
-// initialize websocket
-connectWebSocket();
 
 /**
  * Handles the input event for any slider.
@@ -122,32 +85,25 @@ connectWebSocket();
 function handleSliderChange(event) {
     const { id: name, value } = event.target;
     const numericValue = parseInt(value, 10);
-
+    
     // Update value display in UI
     document.getElementById(`${name}-value`).textContent = numericValue.toString();
-
+    
     // Update state object
     sliderValues[name] = numericValue;
-
-  // Send single slider update over WebSocket in the requested format
-  // {"servo":"BaseArm","angle":90}
-  const payload = JSON.stringify({ servo: name, angle: numericValue });
-    try {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-        updateStatusIndicator('sending');
-        // optimistic success (no ack expected)
-        setTimeout(() => updateStatusIndicator('success'), 150);
-      } else {
-        // queue if not connected
-        wsQueue.push(payload);
-        updateStatusIndicator('error', 'WebSocket not connected, queued');
-      }
-    } catch (err) {
-      console.error('Failed to send via WebSocket:', err);
-      wsQueue.push(payload);
-      updateStatusIndicator('error', err instanceof Error ? err.message : String(err));
-    }
+    
+    // Debounce API call
+    clearTimeout(debounceTimer);
+    updateStatusIndicator('sending');
+    
+    debounceTimer = setTimeout(async () => {
+        const result = await sendSliderData(sliderValues);
+        if (result.success) {
+            updateStatusIndicator('success');
+        } else {
+            updateStatusIndicator('error', result.message);
+        }
+    }, 500); // Debounce by 500ms
 }
 
 // --- INITIALIZATION ---
