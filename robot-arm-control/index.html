@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Arm Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+  <body class="bg-slate-100 dark:bg-slate-900">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <main class="w-full max-w-md mx-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
+          <div class="p-6 sm:p-8">
+      <div class="relative mb-6">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100 text-center">
+          Robot Arm Control
+        </h1>
+        <div id="status-indicator" class="absolute right-0 top-0 h-5"></div>
+      </div>
+
+            <img src="assets/robot-arm.png" alt="Diagram of the robot arm showing control points" class="w-full h-auto rounded-lg mb-8 shadow-md dark:bg-slate-700 p-1">
+            
+            <p class="text-slate-600 dark:text-slate-400 mb-8">
+              Pas de schuifregelaars aan om de robotarm te besturen. Wijzigingen worden automatisch naar de robot-arm verzonden.
+            </p>
+
+            <div id="slider-container" class="space-y-6">
+              <!-- Sliders will be dynamically inserted here -->
+            </div>
+          </div>
+           <footer class="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
+                <p class="text-xs text-slate-500 dark:text-slate-400 text-center">
+                    Verzenden van gegevens naar Node-RED endpoint: <code class="font-mono bg-slate-200 dark:bg-slate-700 rounded px-1">/update-robot-arm</code>
+                </p>
+            </footer>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

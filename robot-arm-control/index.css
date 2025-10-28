@@ -1,0 +1,120 @@
+/* Custom slider styles to make the thumb (bolletje) black across browsers */
+
+/* Base reset for our slider input (we already apply some Tailwind classes) */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent; /* track is styled via Tailwind bg classes */
+}
+
+/* Make the slider input inherit the value text color so we can use currentColor for the thumb */
+#slider-container .slider {
+  color: #475569; /* Tailwind slate-600 */
+}
+.dark #slider-container .slider {
+  color: #94a3b8; /* Tailwind slate-400 */
+}
+
+input[type="range"].slider:focus {
+  outline: none;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+input[type="range"].slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+}
+
+/* Add a visible black border to the track in WebKit */
+input[type="range"].slider::-webkit-slider-runnable-track {
+  box-sizing: border-box;
+  border: 2px solid #b3abab; /* black track */
+  background-clip: padding-box;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #5e5a5a; /* explicit dark red thumb BOLLETJE */ 
+  border: 2px solid rgba(0, 0, 0, 0.06);
+  margin-top: -5px; /* center the thumb vertically on the track */
+  cursor: pointer;
+}
+
+/* Firefox */
+input[type="range"].slider::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+}
+
+/* Firefox track border */
+input[type="range"].slider::-moz-range-track {
+  box-sizing: border-box;
+  border: 2px solid #000;
+  background-clip: padding-box;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #000000;
+  border: none;
+  cursor: pointer;
+}
+
+/* IE/Edge (legacy) */
+input[type="range"].slider::-ms-track {
+  height: 8px;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+
+/* Legacy IE/Edge: create visible track by using an overlay and border on the element itself */
+input[type="range"].slider {
+  /* give the control a visible border as fallback for legacy engines */
+  border-radius: 9999px;
+  border: 2px solid #fff5f5;
+  padding: 2px 0; /* keep vertical spacing so border doesn't overlap track */
+}
+
+/* Ensure visible focus state */
+input[type="range"].slider:focus::-webkit-slider-runnable-track {
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.15);
+}
+input[type="range"].slider:focus::-moz-range-track {
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.15);
+}
+input[type="range"].slider:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.12);
+}
+
+input[type="range"].slider::-ms-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #d7282e;
+  border: none;
+  cursor: pointer;
+}
+
+/* Optional: slightly darker thumb when active/dragging */
+input[type="range"].slider:active::-webkit-slider-thumb,
+input[type="range"].slider:active::-moz-range-thumb,
+input[type="range"].slider:active::-ms-thumb {
+  background: #d7282e; /* slightly darker red when dragging */
+}
+
+/* Make the slider labels (names) match the dark red used in the image (red-700) */
+#slider-container label {
+  color: #d7282e; /* Tailwind red-700 */
+}
+
+.dark #slider-container label {
+  color: #d7282e; /* keep same dark red in dark mode to match image */
+}
