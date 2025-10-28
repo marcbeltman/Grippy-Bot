@@ -119,7 +119,11 @@ connectWebSocket();
  * Handles the input event for any slider.
  * @param {Event} event The input event object.
  */
-function handleSliderChange(event) {
+/**
+ * Update the UI/state when the slider moves (fired on input).
+ * Do NOT send over the network here; sending happens on change/release.
+ */
+function updateSliderValue(event) {
     const { id: name, value } = event.target;
     const numericValue = parseInt(value, 10);
 
@@ -128,18 +132,24 @@ function handleSliderChange(event) {
 
     // Update state object
     sliderValues[name] = numericValue;
+}
 
-  // Send single slider update over WebSocket in the requested format
-  // {"servo":"BaseArm","angle":90}
-  const payload = JSON.stringify({ servo: name, angle: numericValue });
+/**
+ * Send the slider value when the user releases the control (change event).
+ */
+function handleSliderRelease(event) {
+    const { id: name, value } = event.target;
+    const numericValue = parseInt(value, 10);
+
+    // Prepare payload in requested format
+    const payload = JSON.stringify({ servo: name, angle: numericValue });
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(payload);
         updateStatusIndicator('sending');
-        // optimistic success (no ack expected)
+        // optimistic success
         setTimeout(() => updateStatusIndicator('success'), 150);
       } else {
-        // queue if not connected
         wsQueue.push(payload);
         updateStatusIndicator('error', 'WebSocket not connected, queued');
       }
@@ -183,7 +193,10 @@ sliderContainer.appendChild(sliderFragment);
 
 // Add event listeners to all sliders
 document.querySelectorAll('.slider').forEach(slider => {
-    slider.addEventListener('input', handleSliderChange);
+  // update on input for UI feedback
+  slider.addEventListener('input', updateSliderValue);
+  // send only when interaction is finished (mouse release / touch end / keyboard change)
+  slider.addEventListener('change', handleSliderRelease);
 });
 
 // Set initial status
