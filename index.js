@@ -4,7 +4,7 @@ const SLIDER_CONFIGS = [
   { name: 'BaseArm', label: 'Base Arm', min: 0, max: 180, initial: 90 },
   { name: 'MidArm', label: 'Mid Arm', min: 0, max: 180, initial: 90 },
   { name: 'GripperArm', label: 'Gripper Arm', min: 0, max: 180, initial: 90 },
-  { name: 'Finger', label: 'Finger', min: 0, max: 180, initial: 90 },
+  // Finger removed from slider list; replaced by Open/Close buttons below
 ];
 
 const NODE_RED_ENDPOINT = '/update-robot-arm';
@@ -160,6 +160,27 @@ function handleSliderRelease(event) {
     }
 }
 
+/**
+ * Helper to send a servo command (used by buttons)
+ */
+function sendServo(name, numericValue) {
+  const payload = JSON.stringify({ servo: name, angle: numericValue });
+  try {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+      updateStatusIndicator('sending');
+      setTimeout(() => updateStatusIndicator('success'), 150);
+    } else {
+      wsQueue.push(payload);
+      updateStatusIndicator('error', 'WebSocket not connected, queued');
+    }
+  } catch (err) {
+    console.error('Failed to send via WebSocket:', err);
+    wsQueue.push(payload);
+    updateStatusIndicator('error', err instanceof Error ? err.message : String(err));
+  }
+}
+
 // --- INITIALIZATION ---
 
 // Create and append sliders to the container
@@ -191,6 +212,24 @@ SLIDER_CONFIGS.forEach(config => {
 });
 sliderContainer.appendChild(sliderFragment);
 
+// --- Finger control: two grey buttons with black text ---
+// No numeric badge, just Open/Close buttons.
+sliderValues['Finger'] = 90; // default/neutral value
+const fingerHtml = `
+  <div class="flex flex-col space-y-2 w-full">
+    <div class="flex justify-between items-center">
+      <label class="font-medium text-slate-700 dark:text-slate-300 select-none">Finger</label>
+    </div>
+    <div class="flex gap-3">
+      <button id="Finger-open" class="flex-1 bg-gray-200 hover:bg-gray-300 text-black rounded-md px-3 py-2">Open</button>
+      <button id="Finger-close" class="flex-1 bg-gray-200 hover:bg-gray-300 text-black rounded-md px-3 py-2">Close</button>
+    </div>
+  </div>
+`;
+const fingerDiv = document.createElement('div');
+fingerDiv.innerHTML = fingerHtml;
+sliderContainer.appendChild(fingerDiv.firstElementChild);
+
 // Add event listeners to all sliders
 document.querySelectorAll('.slider').forEach(slider => {
   // update on input for UI feedback
@@ -198,6 +237,21 @@ document.querySelectorAll('.slider').forEach(slider => {
   // send only when interaction is finished (mouse release / touch end / keyboard change)
   slider.addEventListener('change', handleSliderRelease);
 });
+
+// Finger buttons event listeners (Open/Close)
+const fingerOpen = document.getElementById('Finger-open');
+const fingerClose = document.getElementById('Finger-close');
+if (fingerOpen && fingerClose) {
+  fingerOpen.addEventListener('click', () => {
+    sliderValues['Finger'] = 50; // open
+    sendServo('Finger', 50);
+  });
+
+  fingerClose.addEventListener('click', () => {
+    sliderValues['Finger'] = 0; // close -> send 50 per request
+    sendServo('Finger', 0);
+  });
+}
 
 // Set initial status
 updateStatusIndicator('idle');
