@@ -86,8 +86,85 @@ function connectWebSocket() {
   });
 
   ws.addEventListener('message', (ev) => {
-    // Optionally handle server messages (not required)
-    console.debug('WS message:', ev.data);
+    console.log("RAW DATA:", ev.data); // ← VOEG DIT TOE
+    // Handle incoming messages from server. Expected JSON shapes:
+    // { type: 'update', servo: '<Name>', angle: <number> }
+    // { type: 'state', sliders: { '<Name>': <angle>, ... } }
+    // { type: 'heartbeat' | 'pong' }
+    // { type: 'ack' }
+    // { type: 'error', message: '...' }
+    console.debug('WS message raw:', ev.data);
+    let msg;
+    try {
+      msg = JSON.parse(ev.data);
+    } catch (err) {
+      console.warn('Received non-JSON WS message:', ev.data);
+      return;
+    }
+    // Also log the parsed object for easier debugging
+    console.debug('WS message parsed:', msg);
+
+    // Update a single servo value
+    if (msg.type === 'update' && msg.servo) {
+      const name = String(msg.servo);
+      const angle = Number(msg.angle);
+      if (!Number.isNaN(angle)) {
+        sliderValues[name] = angle;
+        const sliderEl = document.getElementById(name);
+        if (sliderEl && sliderEl.classList.contains('slider')) {
+          sliderEl.value = angle;
+          const span = document.getElementById(`${name}-value`);
+          if (span) span.textContent = String(angle);
+        } else if (name === 'Finger') {
+          // no slider for finger; show a brief success indicator
+          updateStatusIndicator('success', `Finger ${angle}`);
+        }
+      }
+      return;
+    }
+
+    // Full state sync (set of sliders)
+    if (msg.type === 'state' && msg.sliders && typeof msg.sliders === 'object') {
+      Object.entries(msg.sliders).forEach(([name, value]) => {
+        const angle = Number(value);
+        if (Number.isNaN(angle)) return;
+        sliderValues[name] = angle;
+        const sliderEl = document.getElementById(name);
+        if (sliderEl && sliderEl.classList.contains('slider')) {
+          sliderEl.value = angle;
+          const span = document.getElementById(`${name}-value`);
+          if (span) span.textContent = String(angle);
+        }
+      });
+      updateStatusIndicator('success');
+      return;
+    }
+
+    // Heartbeat / pong from server
+    if (msg.type === 'heartbeat' || msg.type === 'pong') {
+      // small visual feedback in console and a subtle success indicator
+      console.debug('Received heartbeat/pong from server');
+      // Avoid constantly flipping the status; show brief success
+      updateStatusIndicator('success');
+      return;
+    }
+
+    // Acknowledgement message
+    if (msg.type === 'ack') {
+      updateStatusIndicator('success');
+      return;
+    }
+
+    // Server-side error message
+    if (msg.type === 'error') {
+      const m = msg.message || 'Server error';
+      updateStatusIndicator('error', m);
+      console.warn('Server error message:', m);
+      return;
+    }
+
+    // Unknown / unhandled message types
+    console.debug('Unhandled WS message:', msg);
   });
 
   ws.addEventListener('close', (ev) => {
