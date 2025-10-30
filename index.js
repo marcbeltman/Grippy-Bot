@@ -115,6 +115,19 @@ function scheduleReconnect() {
 // initialize websocket
 connectWebSocket();
 
+// Heartbeat: send every 10 seconds to keep the connection alive
+// Sends: { "type": "heartbeat" }
+setInterval(() => {
+  try {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'heartbeat' }));
+    }
+  } catch (err) {
+    // don't let heartbeat exceptions break the interval
+    console.warn('Heartbeat send failed', err);
+  }
+}, 10000);
+
 /**
  * Handles the input event for any slider.
  * @param {Event} event The input event object.
