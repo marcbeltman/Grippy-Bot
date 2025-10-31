@@ -13,6 +13,8 @@
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
           <div class="p-6 sm:p-8">
       <div class="relative mb-6">
+        <!-- Top message area: used for centered error banners above the title -->
+        <div id="top-message" class="mb-4"></div>
         <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100 text-center">
           Robot Arm Control
         </h1>
@@ -21,6 +23,9 @@
 
             <img src="assets/robot-arm.png" alt="Diagram of the robot arm showing control points" class="w-full h-auto rounded-lg mb-8 shadow-md dark:bg-slate-700 p-1">
             
+            <!-- Messages (errors, sensor notices) will appear below the image -->
+            <div id="message-area" class="mb-6"></div>
+
             <p class="text-slate-600 dark:text-slate-400 mb-8">
               Adjust the sliders to control the robot arm. Changes are automatically sent to the robot arm.
             </p>

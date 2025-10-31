@@ -200,19 +200,6 @@ let wsBackoff = 1000;
 let wsMaxBackoff = 30000;
 let wsOpen = false;
 const wsQueue = [];
-const MAX_QUEUE_SIZE = 50;
-
-/**
- * Adds a message to the queue with size limit protection
- * @param {string} payload The message to queue
- */
-function queueMessage(payload) {
-  if (wsQueue.length >= MAX_QUEUE_SIZE) {
-    wsQueue.shift(); // Remove oldest message (FIFO)
-    console.warn('Queue full, removing oldest message');
-  }
-  wsQueue.push(payload);
-}
 
 function connectWebSocket() {
   try {
@@ -391,12 +378,12 @@ function handleSliderRelease(event) {
         // optimistic success
         setTimeout(() => updateStatusIndicator('success'), 150);
       } else {
-        queueMessage(payload);
+        wsQueue.push(payload);
         updateStatusIndicator('error', 'WebSocket not connected, queued');
       }
     } catch (err) {
       console.error('Failed to send via WebSocket:', err);
-      queueMessage(payload);
+      wsQueue.push(payload);
       updateStatusIndicator('error', err instanceof Error ? err.message : String(err));
     }
 }
@@ -412,12 +399,12 @@ function sendServo(name, numericValue) {
       updateStatusIndicator('sending');
       setTimeout(() => updateStatusIndicator('success'), 150);
     } else {
-      queueMessage(payload);
+      wsQueue.push(payload);
       updateStatusIndicator('error', 'WebSocket not connected, queued');
     }
   } catch (err) {
     console.error('Failed to send via WebSocket:', err);
-    queueMessage(payload);
+    wsQueue.push(payload);
     updateStatusIndicator('error', err instanceof Error ? err.message : String(err));
   }
 }
