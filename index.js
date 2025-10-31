@@ -134,23 +134,13 @@ function updateStatusIndicator(status, message = '') {
   let html = '';
 
   switch (status) {
-    case 'sending':
-      html = `<div class="flex items-center text-sm text-yellow-600 dark:text-yellow-400">
-        <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Verzenden...
-      </div>`;
-      break;
-
     case 'success':
     case 'ack':
       html = `<div class="flex items-center text-sm text-green-600 dark:text-green-400">
         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
-        Opgeslagen
+        Action received
       </div>`;
       statusTimer = setTimeout(() => updateStatusIndicator('idle'), 2000);
       break;
@@ -227,7 +217,9 @@ function connectWebSocket() {
     console.info('WebSocket connected');
     wsBackoff = 1000;
     wsOpen = true;
-    updateStatusIndicator('success');
+    // Don't show a persistent "Opgeslagen" message on initial connect.
+    // Keep the indicator neutral instead.
+    updateStatusIndicator('idle');
     // flush queue
     while (wsQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
       const msg = wsQueue.shift();
@@ -286,16 +278,15 @@ function connectWebSocket() {
           if (span) span.textContent = String(angle);
         }
       });
-      updateStatusIndicator('success');
+      // Do not show 'success' for passive state syncs; only show success on explicit ack
+      updateStatusIndicator('idle');
       return;
     }
 
     // Heartbeat / pong from server
     if (msg.type === 'heartbeat' || msg.type === 'pong') {
-      // small visual feedback in console and a subtle success indicator
+      // small visual feedback in console only; do not show 'success' for heartbeats
       console.debug('Received heartbeat/pong from server');
-      // Avoid constantly flipping the status; show brief success
-      updateStatusIndicator('success');
       return;
     }
 
@@ -387,9 +378,6 @@ function handleSliderRelease(event) {
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(payload);
-        updateStatusIndicator('sending');
-        // optimistic success
-        setTimeout(() => updateStatusIndicator('success'), 150);
       } else {
         queueMessage(payload);
         updateStatusIndicator('error', 'WebSocket not connected, queued');
@@ -406,11 +394,9 @@ function handleSliderRelease(event) {
  */
 function sendServo(name, numericValue) {
   const payload = JSON.stringify({ servo: name, angle: numericValue });
-  try {
+    try {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(payload);
-      updateStatusIndicator('sending');
-      setTimeout(() => updateStatusIndicator('success'), 150);
     } else {
       queueMessage(payload);
       updateStatusIndicator('error', 'WebSocket not connected, queued');
