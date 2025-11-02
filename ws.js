@@ -1,1 +1,0 @@
-const websocketUrl = "wss://node-red.xyz/ws/robot-arm"; // 

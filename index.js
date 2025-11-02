@@ -9,6 +9,11 @@ const SLIDER_CONFIGS = [
 
 const NODE_RED_ENDPOINT = '/update-robot-arm';
 
+// === ALLEEN VOOR ARM STATUS ===
+const armStatusEl = document.getElementById('arm-status');
+let heartbeatTimeout = null;
+
+
 // --- STATE ---
 let statusTimer;
 const sliderValues = {};
@@ -100,6 +105,41 @@ function showErrorOverlay(message) {
 
 // --- FUNCTIONS ---
 
+/**
+ * Beheert de "Arm online/offline" status in <div id="arm-status">
+ */
+function updateArmStatus(isOnline) {
+  if (!armStatusEl) return;
+
+  if (isOnline) {
+    armStatusEl.innerHTML = `
+      <div class="flex items-center space-x-2 text-green-600 dark:text-green-400 font-medium">
+        <div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span>Arm online</span>
+      </div>`;
+  } else {
+    armStatusEl.innerHTML = `
+      <div class="flex items-center space-x-2 text-red-600 dark:text-red-400 font-medium">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>Arm offline</span>
+      </div>`;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -140,7 +180,7 @@ function updateStatusIndicator(status, message = '') {
         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
-        Action received
+        Action sended successfully
       </div>`;
       statusTimer = setTimeout(() => updateStatusIndicator('idle'), 2000);
       break;
@@ -217,6 +257,13 @@ function connectWebSocket() {
     console.info('WebSocket connected');
     wsBackoff = 1000;
     wsOpen = true;
+
+    // --- ALLEEN VOOR ARM STATUS ---nieuw
+    updateArmStatus(false);
+    clearTimeout(heartbeatTimeout);
+    heartbeatTimeout = setTimeout(() => updateArmStatus(false), 15000);
+
+
     // Don't show a persistent "Opgeslagen" message on initial connect.
     // Keep the indicator neutral instead.
     updateStatusIndicator('idle');
@@ -284,11 +331,18 @@ function connectWebSocket() {
     }
 
     // Heartbeat / pong from server
-    if (msg.type === 'heartbeat' || msg.type === 'pong') {
-      // small visual feedback in console only; do not show 'success' for heartbeats
-      console.debug('Received heartbeat/pong from server');
-      return;
-    }
+    // if (msg.type === 'heartbeat' || msg.type === 'pong') {
+    //   // small visual feedback in console only; do not show 'success' for heartbeats
+    //   console.debug('Received heartbeat/pong from server');
+    //   return;
+    // }
+    if (msg.type === 'heartbeat_arm') {
+        updateArmStatus(true);
+        clearTimeout(heartbeatTimeout);
+        heartbeatTimeout = setTimeout(() => updateArmStatus(false), 15000);
+      }
+
+
 
     // Acknowledgement message
     if (msg.type === 'ack') {
